@@ -23,8 +23,15 @@ body {
   overflow: visible;
 }
 
+#root > section:first-child {
+  flex: 1 0 auto;
+}
+
+
 .main-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .footer {
@@ -117,8 +124,14 @@ a:hover {
 }
 
 @media (max-width: 768px) {
-  .archives-columns {
-    column-count: 1;
+  .sticky-sidebar {
+    position: static !important;
+    top: auto !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+  .columns {
+    flex-direction: column;
   }
 }
 

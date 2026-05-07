@@ -27,6 +27,8 @@ function HomePage() {
           .sticky-sidebar {
             position: static !important;
             top: auto !important;
+            max-height: none !important;
+            overflow-y: visible !important;
           }
           .columns {
             flex-direction: column !important;
