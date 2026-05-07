@@ -85,7 +85,7 @@ Repositories:
         "model": "deepseek-v4-flash",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.7,
-        "max_tokens": 800
+        "max_tokens": 3000
     }
 
     try:
@@ -93,7 +93,7 @@ Repositories:
             f"{DEEPSEEK_BASE_URL}/chat/completions",
             headers=headers,
             json=payload,
-            timeout=60
+            timeout=180
         )
         if resp.status_code == 200:
             return resp.json()["choices"][0]["message"]["content"]
