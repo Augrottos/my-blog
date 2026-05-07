@@ -4,7 +4,7 @@ import RightWidgets from './RightWidgets';
 
 function HomePage() {
   return (
-    <>
+    <div className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
       <style>{`
         /* 关键修复：强制所有父容器不创建滚动上下文 */
         .section,
@@ -29,10 +29,12 @@ function HomePage() {
             top: auto !important;
           }
           .columns {
-            flex-direction: column;
+            flex-direction: column !important;
           }
           .column {
             width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
           }
         }
       `}</style>
@@ -52,7 +54,8 @@ function HomePage() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
+
 export default HomePage;
