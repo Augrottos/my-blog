@@ -168,7 +168,7 @@ function MomentList() {
           .moment-stats-row {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 1.5rem;
           }
         }
       `}</style>
