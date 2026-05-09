@@ -111,6 +111,15 @@ song_config = sqlalchemy.Table(
     Column("lrc", Text),
 )
 
+# ========== Table of recent trend repos ==========
+recent_repos = sqlalchemy.Table(
+    "recent_repos",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("repo_name", String(200), nullable=False),   # 仓库全名，如 owner/repo
+    Column("date", String(10), nullable=False),         # YYYY-MM-DD UTC+8
+)
+
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False}
@@ -179,6 +188,15 @@ def fix_missing_columns():
                 
             if not column_exists("messages", "root_id"):
                 conn.execute(text("ALTER TABLE messages ADD COLUMN root_id INTEGER"))
+                
+            if not column_exists("recent_repos", "id"):
+                conn.execute(text("ALTER TABLE recent_repos ADD COLUMN id INTEGER"))
+                
+            if not column_exists("recent_repos", "repo_name"):
+                conn.execute(text("ALTER TABLE recent_repos ADD COLUMN repo_name VARCHAR(200)"))
+
+            if not column_exists("recent_repos", "date"):
+                conn.execute(text("ALTER TABLE recent_repos ADD COLUMN date VARCHAR(10)"))
             
             conn.commit()
             print("All missing columns added successfully!")

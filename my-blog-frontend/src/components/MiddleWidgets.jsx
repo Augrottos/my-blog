@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { getCurrentUser, getImageUrl, authFetch } from '../utils'
+import { getCurrentUser, getImageUrl, authFetch, getThumbUrl } from '../utils'
 
 function MomentList() {
   const [moments, setMoments] = useState([])
@@ -236,14 +236,10 @@ function MomentList() {
                       <div className="column is-12">
                         <figure>
                           <img
-                            src={getImageUrl(item.images[0])}
+                            src={getImageUrl(getThumbUrl(item.images[0]))}
                             alt="post image"
-                            style={{
-                              width: '100%',
-                              maxHeight: '300px',
-                              objectFit: 'contain',
-                              display: 'block',
-                            }}
+                            style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', display: 'block' }}
+                            loading="lazy"
                           />
                         </figure>
                       </div>
@@ -252,9 +248,10 @@ function MomentList() {
                         <div key={idx} className="column is-6">
                           <figure className="image is-square">
                             <img
-                              src={getImageUrl(url)}
+                              src={getImageUrl(getThumbUrl(url))}
                               alt={`img-${idx}`}
                               style={{ objectFit: 'cover' }}
+                              loading="lazy"
                             />
                           </figure>
                         </div>

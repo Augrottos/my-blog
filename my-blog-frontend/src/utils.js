@@ -111,3 +111,16 @@ export function authFetch(url, options = {}) {
     credentials: 'include',
   });
 }
+
+/*
+我们需要一个函数，根据原图路径算出缩略图路径。约定:
+原图 /photos/abc.jpg → 缩略图 /photos/thumbs/abc.jpg
+原图 /static/uploads/posts/abc.jpg → 缩略图 /static/uploads/posts/thumbs/abc.jpg
+*/
+export function getThumbUrl(url) {
+  const lastSlash = url.lastIndexOf('/');
+  if (lastSlash === -1) return url;
+  const dir = url.substring(0, lastSlash);
+  const filename = url.substring(lastSlash + 1);
+  return `${dir}/thumbs/${filename}`;
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { authFetch, getImageUrl } from '../utils';
+import { authFetch, getImageUrl, getThumbUrl } from '../utils';
 import Lightbox from './LightBox';
 
 function RightWidgets() {
@@ -53,10 +53,11 @@ function RightWidgets() {
                 <div className="column is-6" key={idx}>
                   <figure className="image is-square">
                     <img
-                      src={getImageUrl(src)}
+                      src={getImageUrl(getThumbUrl(src))}   // 使用缩略图
                       alt={`photo-${idx}`}
                       style={{ objectFit: 'cover' }}
-                      onClick={() => openLightbox(idx)}
+                      loading="lazy"                        // 懒加载
+                      onClick={() => openLightbox(idx)}      // 灯箱里仍用原图
                     />
                   </figure>
                 </div>

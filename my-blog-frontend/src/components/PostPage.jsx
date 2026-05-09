@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getComments, getCurrentUser, addComment, getImageUrl, authFetch } from '../utils';
+import { getComments, getCurrentUser, addComment, getImageUrl, authFetch, getThumbUrl } from '../utils';
 import DOMPurify from 'dompurify';
 import Lightbox from './LightBox';
 
@@ -155,9 +155,10 @@ function PostPage() {
               {validImages.length === 1 ? (
                 <figure className="image" style={{ maxWidth: '100%', cursor: 'pointer' }} onClick={() => openLightbox(0)}>
                   <img
-                    src={getImageUrl(validImages[0])}
+                    src={getImageUrl(getThumbUrl(validImages[0]))}
                     alt="post image"
                     style={{ maxHeight: '400px', objectFit: 'contain' }}
+                    loading="lazy"
                   />
                 </figure>
               ) : (
@@ -166,9 +167,10 @@ function PostPage() {
                     <div key={idx} className="column is-4">
                       <figure className="image is-3by2" onClick={() => openLightbox(idx)} style={{ cursor: 'pointer' }}>
                         <img
-                          src={getImageUrl(url)}
+                          src={getImageUrl(getThumbUrl(url))}
                           alt={`post-img-${idx}`}
                           style={{ objectFit: 'cover' }}
+                          loading="lazy"
                         />
                       </figure>
                     </div>

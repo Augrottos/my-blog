@@ -1,13 +1,17 @@
 import requests
 from bs4 import BeautifulSoup
-import re
 import os
 import asyncio
 from datetime import datetime, timezone, timedelta
+from database import database, recent_repos
 
 TZ_BEIJING = timezone(timedelta(hours=8))
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1"
+
+def beijing_date() -> str:
+    """返回北京时间今天的日期字符串 YYYY-MM-DD"""
+    return datetime.now(TZ_BEIJING).strftime("%Y-%m-%d")
 
 def fetch_github_trending():
     """抓取 GitHub Trending 页面，返回前三个仓库信息"""
@@ -24,7 +28,7 @@ def fetch_github_trending():
         soup = BeautifulSoup(resp.text, "lxml")
         repos = []
         # 选取所有文章卡片
-        articles = soup.select("article.Box-row")[:3]  # 取前3个
+        articles = soup.select("article.Box-row")[:12]  # 取前12个，保证至多去重9个之后仍有可选
         for article in articles:
             # 仓库名
             h2 = article.select_one("h2")
@@ -103,18 +107,43 @@ Repositories:
         return f"LLM request failed: {e}"
 
 async def update_trending_post():
-    """替换旧的 trending 帖子，生成新的"""
+    """每日午夜执行：删除旧 GTT 帖子 → 抓取 → 去重 → 生成新帖 → 记录仓库 → 清理旧记录"""
     from main import database, posts, get_current_time
 
-    # 删除上一条 trending 帖子
+    # 1. 删除所有旧 Trending 帖子（确保永远只有一篇）
     await database.execute(
         posts.delete().where(posts.c.title == "🤖 GitHub Trending Today")
     )
 
-    repos = fetch_github_trending()
-    summary = generate_trending_summary(repos)
+    # 2. 抓取当前 Top 仓库
+    all_repos = fetch_github_trending()
+    if not all_repos:
+        return
+
+    # 3. 获取近 3 天已出现的仓库名（去重用）
+    recent = await get_recent_repos(days=3)
+
+    # 4. 选择 3 个不重复的仓库
+    selected = []
+    for r in all_repos:
+        if r["full_name"] not in recent:
+            selected.append(r)
+            if len(selected) == 3:
+                break
+
+    # 如果热门仓库太少，用剩余的不重复仓库补齐（可能允许重复）
+    if len(selected) < 3:
+        for r in all_repos:
+            if r not in selected:
+                selected.append(r)
+                if len(selected) == 3:
+                    break
+
+    # 5. 生成 AI 摘要
+    summary = generate_trending_summary(selected)
     now = get_current_time()
 
+    # 6. 插入新帖子
     query = posts.insert().values(
         date=now,
         title="🤖 GitHub Trending Today",
@@ -125,6 +154,12 @@ async def update_trending_post():
         word_count=f"{len(summary)} chars"
     )
     await database.execute(query)
+
+    # 7. 记录今天选中的仓库
+    await save_today_repos([r["full_name"] for r in selected])
+
+    # 8. 清理 3 天前的记录（只保留近 3 天）
+    await clean_old_repos(days=3)
 
 async def trending_scheduler():
     """每天 0 点（北京时间）执行一次"""
@@ -138,3 +173,94 @@ async def trending_scheduler():
             await update_trending_post()
         except Exception as e:
             print(f"Trending update failed: {e}")
+            
+async def get_recent_repos(days=3) -> set:
+    """获取近 days 天内已出现在 GTT 中的仓库名称集合"""
+    since_date = (datetime.now(TZ_BEIJING) - timedelta(days=days)).strftime("%Y-%m-%d")
+    rows = await database.fetch_all(
+        recent_repos.select().where(recent_repos.c.date >= since_date)
+    )
+    return {row["repo_name"] for row in rows}
+
+async def save_today_repos(repo_names: list):
+    """将今天选中的仓库名批量写入 recent_repos 表"""
+    today_str = beijing_date()
+    for name in repo_names:
+        await database.execute(
+            recent_repos.insert().values(repo_name=name, date=today_str)
+        )
+
+async def clean_old_repos(days=3):
+    """删除 days 天前的仓库记录"""
+    cutoff = (datetime.now(TZ_BEIJING) - timedelta(days=days)).strftime("%Y-%m-%d")
+    await database.execute(
+        recent_repos.delete().where(recent_repos.c.date < cutoff)
+    )
+
+def _ask_deepseek_sync(question: str) -> str:
+    """同步调用 DeepSeek，返回回答文本"""
+    if not DEEPSEEK_API_KEY:
+        return "DeepSeek API key is not configured."
+    headers = {
+        "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "deepseek-v4-flash",
+        "messages": [
+            {"role": "system", "content": "You are a helpful assistant answering questions about GitHub trending repos. Keep answers concise and informative."},
+            {"role": "user", "content": question}
+        ],
+        "temperature": 0.7,
+        "max_tokens": 1000
+    }
+    try:
+        resp = requests.post(
+            f"{DEEPSEEK_BASE_URL}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=120
+        )
+        if resp.status_code == 200:
+            return resp.json()["choices"][0]["message"]["content"]
+        else:
+            return f"Sorry, the AI service returned an error (status {resp.status_code})."
+    except Exception as e:
+        return f"Sorry, AI request failed: {e}"
+
+async def ask_deepseek(question: str) -> str:
+    """异步调用 DeepSeek，通过线程池执行同步请求"""
+    return await asyncio.to_thread(_ask_deepseek_sync, question)
+
+async def process_deepseek_reply(post_id: int, parent_comment_id: int, user_question: str, asker_name: str):
+    """后台任务：生成 AI 回复并插入数据库，作为对问题的回答"""
+    from main import database, posts, comments, get_current_time
+    try:
+        # 提取真正的问题（去掉 @deepseek 前缀）
+        question = user_question[len("@deepseek"):].strip()
+        if not question:
+            return
+
+        # 调用 DeepSeek
+        answer = await ask_deepseek(question)
+
+        # 插入回复
+        now = get_current_time()
+        insert_query = comments.insert().values(
+            post_id=post_id,
+            author="DeepSeek",
+            content=f"{answer}",
+            created_at=now,
+            parent_id=parent_comment_id,
+            parent_author=asker_name
+        )
+        await database.execute(insert_query)
+
+        # 更新帖子评论计数
+        await database.execute(
+            posts.update().where(posts.c.id == post_id).values(
+                comment_count=posts.c.comment_count + 1
+            )
+        )
+    except Exception as e:
+        print(f"DeepSeek reply error: {e}")

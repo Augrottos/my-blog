@@ -37,6 +37,11 @@ import bcrypt
 # Automatically eliminate unverified users
 import asyncio
 
+# 生成缩略图
+from PIL import Image
+THUMB_MAX_WIDTH = 600          # 缩略图最大宽度
+THUMB_QUALITY = 75             # JPEG 质量
+
 from github_trending import trending_scheduler, update_trending_post
 
 app = FastAPI()
@@ -263,6 +268,23 @@ def allowed_file(filename):
 
 def is_strong_password(password: str) -> bool:
     return bool(re.match(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};:\\|,.<>/?]).{8,}$', password))
+
+def create_thumbnail(original_path: str, thumb_path: str):
+    """生成缩略图并保存到 thumb_path"""
+    os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+    try:
+        with Image.open(original_path) as img:
+            # 保持宽高比缩放
+            if img.width > THUMB_MAX_WIDTH:
+                ratio = THUMB_MAX_WIDTH / img.width
+                new_height = int(img.height * ratio)
+                img = img.resize((THUMB_MAX_WIDTH, new_height), Image.Resampling.LANCZOS)
+            # 转成 RGB（防止 PNG 透明通道问题），保存为 JPEG 并压缩
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            img.save(thumb_path, 'JPEG', quality=THUMB_QUALITY, optimize=True)
+    except Exception as e:
+        print(f"Thumbnail generation failed for {original_path}: {e}")
 
 async def verify_csrf(request: Request):
     if request.method == "OPTIONS":
@@ -499,13 +521,26 @@ async def add_comment(
         parent_id=req.parent_id,
         parent_author=parent_author
     )
-    await database.execute(query)
+    user_comment_id = await database.execute(query)   # 获取新插入的评论 ID
 
     await database.execute(
         posts.update().where(posts.c.id == post_id).values(
             comment_count=posts.c.comment_count + 1
         )
     )
+    
+    # 异步启动后台任务，不阻塞当前响应
+    post_row = await database.fetch_one(posts.select().where(posts.c.id == post_id))
+    if post_row and post_row["title"] == "🤖 GitHub Trending Today":
+        if req.content.strip().lower().startswith("@deepseek"):
+            # 启动后台任务处理 AI 回复
+            from github_trending import process_deepseek_reply
+            asyncio.create_task(process_deepseek_reply(
+                post_id=post_id,
+                parent_comment_id=user_comment_id,
+                user_question=req.content,
+                asker_name=author   # 传递提问者用户名，回复时标注
+            ))
     
     return success(msg="Comment added")
 
@@ -550,8 +585,8 @@ async def register(user: UserRegister):
         user.password = user.password.encode("utf-8")[:72].decode("utf-8", "ignore")
         
         username_exists = await database.fetch_one(users.select().where(users.c.username == user.username))
-        if user.username.lower().strip() == 'anonymous':
-            return {"code": 400, "msg": "Username cannot be 'Anonymous'"}
+        if user.username.lower().strip() in ['anonymous', 'deepseek']:
+            return {"code": 400, "msg": "Such username is invalid!'"}
         
         if username_exists:
             return {"code": 400, "msg": "Username already exists"}
@@ -857,6 +892,11 @@ async def upload_photo(
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
+        
+    # 生成缩略图
+    thumb_dir = os.path.join(PHOTOS_DIR, "thumbs")
+    thumb_path = os.path.join(thumb_dir, safe_name)
+    create_thumbnail(file_path, thumb_path)
 
     url = f"/photos/{safe_name}"
     return success(data={"url": url})
@@ -1071,6 +1111,11 @@ async def upload_post_image(
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
+            
+        # 生成缩略图
+        thumb_dir = os.path.join(POST_IMAGES_DIR, "thumbs")
+        thumb_path = os.path.join(thumb_dir, safe_name)
+        create_thumbnail(file_path, thumb_path)
 
         url = f"/static/uploads/posts/{safe_name}"
         return success(data={"url": url})

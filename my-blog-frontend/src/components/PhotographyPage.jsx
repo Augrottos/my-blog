@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getCurrentUser, authFetch, getImageUrl } from '../utils';
+import { getCurrentUser, authFetch, getImageUrl, getThumbUrl } from '../utils';
 import Lightbox from './LightBox';
 
 const API_BASE = '/api';
@@ -108,9 +108,10 @@ function PhotographyPage() {
                     <div className="card-image">
                       <figure className="image is-4by3">
                         <img
-                          src={fullSrc}
+                          src={getImageUrl ? getImageUrl(getThumbUrl(src)) : getThumbUrl(src)}
                           alt={`photo-${idx}`}
                           style={{ objectFit: 'cover' }}
+                          loading="lazy"
                           onClick={() => openLightbox(idx)}
                         />
                       </figure>
