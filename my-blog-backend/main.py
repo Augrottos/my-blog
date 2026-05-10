@@ -698,7 +698,7 @@ async def login(user: UserLogin, response: Response, request: Request):
             httponly=False,
             secure=secure_flag,
             samesite="Lax",
-            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
             path="/"
         )
 
