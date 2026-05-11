@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 import os
 import asyncio
 from datetime import datetime, timezone, timedelta
-from database import database, recent_repos
+from database import database, posts, post_images, likes, comments, recent_repos
 
 TZ_BEIJING = timezone(timedelta(hours=8))
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
