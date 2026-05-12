@@ -6,7 +6,7 @@ from fastapi import FastAPI, Body, HTTPException, Depends, status, Request, Resp
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
-from database import database, posts, comments, likes, users, projects_table, post_images, messages,song_config
+from database import database, posts, comments, likes, users, projects_table, post_images, messages, song_config, deepseek_usage
 from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from sqlalchemy import func, select, and_, desc, or_
 from pydantic import BaseModel, EmailStr
@@ -309,6 +309,34 @@ async def verify_csrf(request: Request):
     if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
         raise HTTPException(status_code=403, detail="CSRF validation failed")
     
+async def check_deepseek_daily_limit(username: str):
+    """检查用户今日 DeepSeek 调用是否超限（每天2次）。返回 (allowed: bool, remaining: int)"""
+    today = beijing_now().strftime("%Y-%m-%d")
+    row = await database.fetch_one(
+        deepseek_usage.select().where(
+            and_(deepseek_usage.c.username == username, deepseek_usage.c.date == today)
+        )
+    )
+    count = row["count"] if row else 0
+    return (count < 2, 2 - count)
+
+async def record_deepseek_usage(username: str):
+    """记录一次 DeepSeek 调用"""
+    today = beijing_now().strftime("%Y-%m-%d")
+    row = await database.fetch_one(
+        deepseek_usage.select().where(
+            and_(deepseek_usage.c.username == username, deepseek_usage.c.date == today)
+        )
+    )
+    if row:
+        await database.execute(
+            deepseek_usage.update().where(deepseek_usage.c.id == row["id"]).values(count=row["count"] + 1)
+        )
+    else:
+        await database.execute(
+            deepseek_usage.insert().values(username=username, date=today, count=1)
+        )
+
 async def cleanup_unverified_users():
     while True:
         await asyncio.sleep(60)  # Check for every minute
@@ -552,20 +580,28 @@ async def add_comment(
     )
     if post_row and post_row["title"] == "🤖 GitHub Trending Today":
         content_lower = req.content.strip().lower()
-        if content_lower.startswith("@deepseek-context"):
-            asyncio.create_task(process_deepseek_context_reply(
-                post_id=post_id,
-                parent_comment_id=user_comment_id,
-                user_question=req.content,
-                asker_name=author
-            ))
-        elif content_lower.startswith("@deepseek"):
-            asyncio.create_task(process_deepseek_reply(
-                post_id=post_id,
-                parent_comment_id=user_comment_id,
-                user_question=req.content,
-                asker_name=author
-            ))
+        if content_lower.startswith("@deepseek"):
+            # 非管理员用户检查 DeepSeek 每日调用配额（每天2次）
+            if current_user.role != "admin":
+                allowed, remaining = await check_deepseek_daily_limit(author)
+                if not allowed:
+                    return success(msg="Comment added. DeepSeek daily limit (2/day) reached.")
+                await record_deepseek_usage(author)
+            
+            if content_lower.startswith("@deepseek-context"):
+                asyncio.create_task(process_deepseek_context_reply(
+                    post_id=post_id,
+                    parent_comment_id=user_comment_id,
+                    user_question=req.content,
+                    asker_name=author
+                ))
+            else:
+                asyncio.create_task(process_deepseek_reply(
+                    post_id=post_id,
+                    parent_comment_id=user_comment_id,
+                    user_question=req.content,
+                    asker_name=author
+                ))
     
     return success(msg="Comment added")
 
@@ -735,6 +771,7 @@ async def login(user: UserLogin, response: Response, request: Request):
         return {"code": 500, "msg": f"Internal server error: {str(e)}"}
 
 @app.post("/api/admin/login")
+@limiter.limit("5/15min")
 async def admin_login(admin: AdminLogin, response: Response):
     try:
         if admin.admin_key != ADMIN_SECRET_KEY:

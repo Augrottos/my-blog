@@ -112,6 +112,16 @@ song_config = sqlalchemy.Table(
     Column("lrc", Text),
 )
 
+# ========== Table of DeepSeek API usage tracking ==========
+deepseek_usage = sqlalchemy.Table(
+    "deepseek_usage",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("username", String(50), nullable=False),
+    Column("date", String(10), nullable=False),         # YYYY-MM-DD UTC+8
+    Column("count", Integer, default=0),
+)
+
 # ========== Table of recent trend repos ==========
 recent_repos = sqlalchemy.Table(
     "recent_repos",
@@ -201,6 +211,15 @@ def fix_missing_columns():
 
             if not column_exists("recent_repos", "date"):
                 conn.execute(text("ALTER TABLE recent_repos ADD COLUMN date VARCHAR(10)"))
+            
+            if not column_exists("deepseek_usage", "id"):
+                conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN id INTEGER"))
+            if not column_exists("deepseek_usage", "username"):
+                conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN username VARCHAR(50)"))
+            if not column_exists("deepseek_usage", "date"):
+                conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN date VARCHAR(10)"))
+            if not column_exists("deepseek_usage", "count"):
+                conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN count INTEGER DEFAULT 0"))
             
             conn.commit()
             print("All missing columns added successfully!")
