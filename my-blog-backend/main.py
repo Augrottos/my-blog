@@ -772,7 +772,7 @@ async def login(user: UserLogin, response: Response, request: Request):
 
 @app.post("/api/admin/login")
 @limiter.limit("5/15min")
-async def admin_login(admin: AdminLogin, response: Response):
+async def admin_login(request: Request, admin: AdminLogin, response: Response):
     try:
         if admin.admin_key != ADMIN_SECRET_KEY:
             raise HTTPException(status_code=403, detail="Invalid admin key")
