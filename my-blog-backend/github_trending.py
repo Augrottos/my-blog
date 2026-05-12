@@ -271,7 +271,7 @@ async def process_deepseek_reply(post_id: int, parent_comment_id: int, user_ques
         insert_query = comments.insert().values(
             post_id=post_id,
             author="DeepSeek",
-            content=f"🤖 {answer}",
+            content=f"{answer}",
             created_at=now,
             parent_id=parent_comment_id,
             parent_author=asker_name
@@ -313,7 +313,7 @@ User question: {question}"""
         insert_query = comments.insert().values(
             post_id=post_id,
             author="DeepSeek",
-            content=f"🤖 {answer}",
+            content=f"{answer}",
             created_at=now,
             parent_id=parent_comment_id,
             parent_author=asker_name

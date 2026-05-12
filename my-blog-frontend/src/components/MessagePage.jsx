@@ -144,11 +144,19 @@ function MessagesPage() {
                         <p className="is-size-7 has-text-weight-bold">{msg.sender_username}</p>
                         {msg.quoted_content && (
                           <div style={{ marginBottom: '6px', borderTop: '1px solid #ccc', paddingTop: '4px' }}>
-                            <p className="is-size-7 has-text-grey" style={{ fontStyle: 'italic' }}>
-                              {msg.quoted_content?.length > 100 
-                                ? msg.quoted_content.substring(0, 100) + '...' 
-                                : msg.quoted_content}
-                            </p>
+                            {msg.sender_username === ADMIN_NAME ? (
+                              <p className="is-size-7 has-text-grey" style={{ fontStyle: 'italic' }}>
+                                {msg.quoted_content?.length > 100 
+                                  ? msg.quoted_content.substring(0, 100) + '...' 
+                                  : msg.quoted_content}
+                              </p>
+                            ) : (
+                              <p className="is-size-7 has-text-white" style={{ fontStyle: 'italic' }}>
+                                {msg.quoted_content?.length > 100 
+                                  ? msg.quoted_content.substring(0, 100) + '...' 
+                                  : msg.quoted_content}
+                              </p>
+                            )}
                           </div>
                         )}
                         <p>{msg.content}</p>
