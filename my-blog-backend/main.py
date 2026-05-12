@@ -640,7 +640,7 @@ async def admin_delete_post(
     return success(data={"deleted_post_id": post_id})
 
 @app.post("/api/register")
-@limiter.limit("3/hour")
+@limiter.limit("10/hour")
 async def register(request: Request, user: UserRegister):
     try:
         # Truncate the password to 72 characters to prevent bcrypt issues
