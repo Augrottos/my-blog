@@ -511,6 +511,7 @@ async def get_comments(
 @app.post("/api/posts/{post_id}/comments")
 @limiter.limit("10/minute")
 async def add_comment(
+    request: Request,
     post_id: int,
     req: CommentRequest,
     current_user: TokenData = Depends(get_current_user),
@@ -604,7 +605,7 @@ async def admin_delete_post(
 
 @app.post("/api/register")
 @limiter.limit("3/hour")
-async def register(user: UserRegister):
+async def register(request: Request, user: UserRegister):
     try:
         # Truncate the password to 72 characters to prevent bcrypt issues
         user.password = user.password.encode("utf-8")[:72].decode("utf-8", "ignore")
@@ -1153,6 +1154,7 @@ async def upload_post_image(
 @app.post("/api/messages")
 @limiter.limit("5/minute")
 async def send_message(
+    request: Request,
     req: MessageCreate,
     current_user: TokenData = Depends(get_current_user),
     _=Depends(verify_csrf)
