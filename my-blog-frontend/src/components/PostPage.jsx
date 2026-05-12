@@ -12,6 +12,7 @@ function PostPage() {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
   const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [likesUsers, setLikesUsers] = useState([]);
   const [replyTo, setReplyTo] = useState(null);
@@ -38,6 +39,7 @@ function PostPage() {
   }, [id]);
 
   const handleLike = async () => {
+    if (isLiking) return;
     const userRes = await getCurrentUser();
     if (!userRes?.data?.username) {
       alert('Please login to like the post.');
@@ -64,30 +66,30 @@ function PostPage() {
   };
 
   const handleSubmitComment = async () => {
-    if (!newComment.trim()) return;
-
-    const userRes = await getCurrentUser();
-    if (!userRes?.data?.username) {
-      alert('Please login to comment.');
-      return;
-    }
-
-    const body = { content: newComment };
-    if (replyTo) body.parent_id = replyTo.id;
-
-    try {
-      await authFetch(`/api/posts/${id}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body)
-      });
-      setNewComment("");
-      setReplyTo(null);
-      getComments(id).then(res => setComments(res.data || []));
-    } catch (error) {
-      console.log("Failed to submit comment", error);
-    }
+      if (!newComment.trim()) return;
+      const userRes = await getCurrentUser();
+      if (!userRes?.data?.username) {
+          alert('Please login to comment.');
+          return;
+      }
+      const body = { content: newComment };
+      if (replyTo) body.parent_id = replyTo.id;
+      try {
+          await authFetch(`/api/posts/${id}/comments`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify(body)
+          });
+          setNewComment("");
+          setReplyTo(null);
+          // 刷新评论列表
+          getComments(id).then(res => setComments(res.data || []));
+          // 更新评论计数（从后端重新获取帖子或手动 +1）
+          setPost(prev => prev ? { ...prev, comment_count: (prev.comment_count || 0) + 1 } : prev);
+      } catch (error) {
+          console.log("Failed to submit comment", error);
+      }
   };
 
   const handleDeleteComment = async (commentId) => {

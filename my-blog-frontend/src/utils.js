@@ -1,7 +1,7 @@
 const API_BASE = "/api";
 
 function getLocalToken() {
-  return localStorage.getItem("token") || "";
+  return "";  // no longer using localStorage for token storage
 }
 
 export function getAuthHeaders() {
@@ -10,7 +10,7 @@ export function getAuthHeaders() {
   };
   const localToken = getLocalToken();
   if (localToken) {
-    headers["Authorization"] = `Bearer ${localToken}`;
+    // Authorization via httponly cookie, not localStorage
   }
   return headers;
 }
@@ -36,7 +36,7 @@ export async function registerUser(username, email, password) {
 }
 
 export function setAuthToken(token) {
-  localStorage.setItem("token", token);
+  // no-op: authentication is now cookie-only (httponly)
 }
 
 export async function toggleLike(postId) {

@@ -206,6 +206,16 @@ def fix_missing_columns():
             print("All missing columns added successfully!")
     except Exception as e:
         print(f"Error adding columns: {str(e)}")
+        
+    # 创建唯一索引，防止重复点赞
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_likes_user_post ON likes(user_name, post_id)"
+            ))
+            conn.commit()
+    except Exception as e:
+        print(f"Unique index may already exist or error: {e}")
 
 fix_missing_columns()
 

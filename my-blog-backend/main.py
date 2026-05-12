@@ -39,6 +39,7 @@ import asyncio
 
 # 生成缩略图
 from PIL import Image
+Image.MAX_IMAGE_PIXELS = 89478485  # ~85 MP, prevent decompression bombs
 THUMB_MAX_WIDTH = 600          # 缩略图最大宽度
 THUMB_QUALITY = 75             # JPEG 质量
 
@@ -288,15 +289,23 @@ def create_thumbnail(original_path: str, thumb_path: str):
     except Exception as e:
         print(f"Thumbnail generation failed for {original_path}: {e}")
 
+def safe_path(base_dir: str, filename: str) -> str:
+    """Resolve file path and ensure it stays within base_dir. Raises HTTPException on escape attempt."""
+    full_path = os.path.realpath(os.path.join(base_dir, filename))
+    real_base = os.path.realpath(base_dir)
+    if not full_path.startswith(real_base + os.sep) and full_path != real_base:
+        raise HTTPException(status_code=400, detail="Invalid path")
+    return full_path
+
 async def verify_csrf(request: Request):
     if request.method == "OPTIONS":
         return
     csrf_cookie = request.cookies.get("csrf_token")
     csrf_header = request.headers.get("X-CSRF-Token")
-    print("=== CSRF DEBUG ===")
-    print("Cookie:", repr(csrf_cookie))
-    print("Header:", repr(csrf_header))
-    print("Equal?", csrf_cookie == csrf_header)
+    # CSRF DEBUG removed for security
+    # CSRF debug lines removed for security
+    # (removed)
+    # (removed)
     if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
         raise HTTPException(status_code=403, detail="CSRF validation failed")
     
@@ -420,6 +429,7 @@ async def get_likes(post_id: int):
     return success(data=[{"user_name": row["user_name"], "created_at": row["created_at"]} for row in rows])
 
 @app.post("/api/posts/{post_id}/like")
+@limiter.limit("20/minute")
 async def toggle_like(
     post_id: int,
     current_user: TokenData = Depends(get_current_user),
@@ -498,6 +508,7 @@ async def get_comments(
     return success(data=result)
 
 @app.post("/api/posts/{post_id}/comments")
+@limiter.limit("10/minute")
 async def add_comment(
     post_id: int,
     req: CommentRequest,
@@ -515,24 +526,28 @@ async def add_comment(
         if parent_comment:
             parent_author = parent_comment["author"]
     
-    query = comments.insert().values(
-        post_id=post_id,
-        author=author,
-        content=req.content,
-        created_at=now,
-        parent_id=req.parent_id,
-        parent_author=parent_author
-    )
-    user_comment_id = await database.execute(query)   # 获取新插入的评论 ID
-
-    await database.execute(
-        posts.update().where(posts.c.id == post_id).values(
-            comment_count=posts.c.comment_count + 1
+    # 1. 在事务中同时插入评论和更新计数，保证原子性
+    async with database.transaction():
+        query = comments.insert().values(
+            post_id=post_id,
+            author=author,
+            content=req.content,
+            created_at=now,
+            parent_id=req.parent_id,
+            parent_author=parent_author
         )
-    )
+        user_comment_id = await database.execute(query)
+        
+        await database.execute(
+            posts.update().where(posts.c.id == post_id).values(
+                comment_count=posts.c.comment_count + 1
+            )
+        )
     
-    # 异步启动后台任务，不阻塞当前响应
-    post_row = await database.fetch_one(posts.select().where(posts.c.id == post_id))
+    # 2. 事务提交成功后，检查是否触发 DeepSeek 自动回复
+    post_row = await database.fetch_one(
+        posts.select().where(posts.c.id == post_id)
+    )
     if post_row and post_row["title"] == "🤖 GitHub Trending Today":
         content_lower = req.content.strip().lower()
         if content_lower.startswith("@deepseek-context"):
@@ -587,6 +602,7 @@ async def admin_delete_post(
     return success(data={"deleted_post_id": post_id})
 
 @app.post("/api/register")
+@limiter.limit("3/hour")
 async def register(user: UserRegister):
     try:
         # Truncate the password to 72 characters to prevent bcrypt issues
@@ -597,14 +613,14 @@ async def register(user: UserRegister):
             return {"code": 400, "msg": "Such username is invalid!'"}
         
         if username_exists:
-            return {"code": 400, "msg": "Username already exists"}
+            return {"code": 400, "msg": "Registration failed. Please check your input."}
 
         email_exists = await database.fetch_one(users.select().where(users.c.email == user.email))
         if email_exists:
-            return {"code": 400, "msg": "Email already exists"}
+            return {"code": 400, "msg": "Registration failed. Please check your input."}
 
         if not is_strong_password(user.password):
-            return {"code": 400, "msg": "Password is too weak"}
+            return {"code": 400, "msg": "Password must be 8+ characters with uppercase, lowercase, number, and special character"}
 
         hashed_pw = get_password_hash(user.password)
         verify_token = secrets.token_urlsafe(32)
@@ -779,7 +795,7 @@ async def me(current_user: TokenData = Depends(get_current_user)):
     return success(data={"username": current_user.username, "role": current_user.role})
 
 @app.get("/api/auth/check")
-async def check_verify(username: str):
+async def check_verify(username: str, current_user: TokenData = Depends(get_current_user)):
     user = await database.fetch_one(users.select().where(users.c.username == username))
     if not user:
         return {"code": 404, "is_verified": False}
@@ -897,7 +913,7 @@ async def upload_photo(
         raise HTTPException(status_code=400, detail="Unsupported file type")
 
     timestamp = str(int(time.time() * 1000))
-    safe_name = f"{timestamp}_{file.filename}"
+    safe_name = f"{timestamp}_{os.path.basename(file.filename)}"
     file_path = os.path.join(PHOTOS_DIR, safe_name)
 
     with open(file_path, "wb") as buffer:
@@ -932,7 +948,7 @@ async def delete_photo(
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
-    file_path = os.path.join(PHOTOS_DIR, filename)
+    file_path = safe_path(PHOTOS_DIR, filename)
     if os.path.exists(file_path):
         os.remove(file_path)
         return success(msg="Deleted")
@@ -971,7 +987,7 @@ async def list_notes():
 @app.get("/api/notes/{note_id}")
 async def get_note(note_id: str):
     filename = note_id + '.md'
-    path = os.path.join(NOTES_DIR, filename)
+    path = safe_path(NOTES_DIR, filename)
     if not os.path.exists(path):
         return fail(msg="Note not found", code=404)
     with open(path, 'r', encoding='utf-8') as fp:
@@ -993,10 +1009,10 @@ async def create_note(note: NoteCreate,
     base = re.sub(r'[^\w\s-]', '', note.title).strip()
     base = re.sub(r'[-\s]+', '-', base)[:50]
     filename = base + '.md'
-    path = os.path.join(NOTES_DIR, filename)
+    path = safe_path(NOTES_DIR, filename)
     if os.path.exists(path):
         filename = f"{base}-{uuid.uuid4().hex[:6]}.md"
-        path = os.path.join(NOTES_DIR, filename)
+        path = safe_path(NOTES_DIR, filename)
     with open(path, 'w', encoding='utf-8') as fp:
         fp.write(note.content)
     note_id = filename.replace('.md', '')
@@ -1011,14 +1027,14 @@ async def update_note(note_id: str,
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     old_file = note_id + '.md'
-    old_path = os.path.join(NOTES_DIR, old_file)
+    old_path = safe_path(NOTES_DIR, old_file)
     if not os.path.exists(old_path):
         return fail(msg="Note not found", code=404)
 
     new_base = re.sub(r'[^\w\s-]', '', note.title).strip()
     new_base = re.sub(r'[-\s]+', '-', new_base)[:50]
     new_file = new_base + '.md'
-    new_path = os.path.join(NOTES_DIR, new_file)
+    new_path = safe_path(NOTES_DIR, new_file)
 
     if old_file != new_file and not os.path.exists(new_path):
         os.rename(old_path, new_path)
@@ -1040,7 +1056,7 @@ async def delete_note(note_id: str,
 ):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
-    path = os.path.join(NOTES_DIR, note_id + '.md')
+    path = safe_path(NOTES_DIR, note_id + '.md')
     if os.path.exists(path):
         os.remove(path)
         return success(msg="Deleted")
@@ -1134,6 +1150,7 @@ async def upload_post_image(
         raise HTTPException(status_code=500, detail="Internal server error")
     
 @app.post("/api/messages")
+@limiter.limit("5/minute")
 async def send_message(
     req: MessageCreate,
     current_user: TokenData = Depends(get_current_user),
@@ -1444,7 +1461,7 @@ async def get_song():
     })
 
 @app.put("/api/admin/song")
-async def set_song(req: SongUpdate, current_user: TokenData = Depends(get_current_user)):
+async def set_song(req: SongUpdate, current_user: TokenData = Depends(get_current_user), _=Depends(verify_csrf)):
     if current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     await database.execute(song_config.delete())
