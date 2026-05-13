@@ -25,7 +25,6 @@ from slowapi.errors import RateLimitExceeded
 
 # Email verification
 import yagmail
-import secrets
 
 # Login and registration
 from jose import jwt, JWTError
@@ -57,7 +56,11 @@ app.add_middleware(
 
 load_dotenv()
 
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost")
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "")
+if not FRONTEND_BASE_URL:
+    if os.getenv("ENV", "development") == "production":
+        raise ValueError("FRONTEND_BASE_URL must be set in .env for production (e.g. https://littlebanbrick.cn)")
+    FRONTEND_BASE_URL = "http://localhost"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
@@ -643,8 +646,9 @@ async def admin_delete_post(
 @limiter.limit("10/hour")
 async def register(request: Request, user: UserRegister):
     try:
-        # Truncate the password to 72 characters to prevent bcrypt issues
-        user.password = user.password.encode("utf-8")[:72].decode("utf-8", "ignore")
+        # Truncate password to 72 bytes, preserving complete UTF-8 characters
+        while len(user.password.encode("utf-8")) > 72:
+            user.password = user.password[:-1]
         
         username_exists = await database.fetch_one(users.select().where(users.c.username == user.username))
         if user.username.lower().strip() in ['anonymous', 'deepseek']:
@@ -678,7 +682,7 @@ async def register(request: Request, user: UserRegister):
 
         try:
             send_verify_email(user.email, verify_token)
-        except:
+        except Exception:
             return {"code": 200, "msg": "Registered, but failed to send verification email"}
 
         return {"code": 200, "msg": "Registered successfully, please verify your email"}
@@ -689,6 +693,7 @@ async def register(request: Request, user: UserRegister):
         return {"code": 500, "msg": f"Internal server error: {str(e)}"}
 
 @app.get("/api/verify-email")
+@limiter.limit("20/minute")
 async def verify_email(token: str):
     try:
         user = await database.fetch_one(users.select().where(users.c.verify_token == token))
@@ -720,7 +725,9 @@ async def verify_email(token: str):
 @limiter.limit("5/15min")
 async def login(user: UserLogin, response: Response, request: Request):
     try:
-        user.password = user.password.encode("utf-8")[:72].decode("utf-8", "ignore")
+        # Truncate password to 72 bytes, preserving complete UTF-8 characters
+        while len(user.password.encode("utf-8")) > 72:
+            user.password = user.password[:-1]
         
         query = users.select().where(users.c.username == user.username)
         row = await database.fetch_one(query)
@@ -833,12 +840,6 @@ async def logout(response: Response):
 async def me(current_user: TokenData = Depends(get_current_user)):
     return success(data={"username": current_user.username, "role": current_user.role})
 
-@app.get("/api/auth/check")
-async def check_verify(username: str, current_user: TokenData = Depends(get_current_user)):
-    user = await database.fetch_one(users.select().where(users.c.username == username))
-    if not user:
-        return {"code": 404, "is_verified": False}
-    return {"code": 200, "is_verified": user["is_verified"]}
 
 @app.get("/wait-verification")
 async def wait_verification():
@@ -862,7 +863,7 @@ async def get_user_profile(current_user: TokenData = Depends(get_current_user)):
         "username": user["username"],
         "email": user["email"],
         "role": user["role"],
-        "is_verified": user["is_verified"]
+        "is_verified": bool(user["is_verified"])
     })
     
 @app.delete("/api/user/delete")

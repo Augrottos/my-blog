@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { authFetch } from '../utils';
 
 function VerifyEmail() {
   const [searchParams] = useSearchParams();
@@ -13,13 +12,20 @@ function VerifyEmail() {
       return;
     }
 
-    authFetch(`/api/verify-email?token=${token}`)
+    // Use plain fetch — this endpoint does not require authentication
+    fetch(`/api/verify-email?token=${encodeURIComponent(token)}`)
       .then(res => res.json())
       .then(data => {
         setStatus(data.msg);
+        if (data.code === 200) {
+          // Verification succeeded — redirect to login after a short delay
+          setTimeout(() => {
+            window.location.href = "/login";
+          }, 2000);
+        }
       })
       .catch(() => {
-        setStatus("Failed");
+        setStatus("Network error. Please try again.");
       });
   }, [token]);
 
@@ -31,6 +37,11 @@ function VerifyEmail() {
             <div className="card">
               <div className="card-content" style={{ textAlign: "center", padding: "3rem" }}>
                 <h1 className="title is-4">{status}</h1>
+                {status && !status.includes("success") && (
+                  <p className="has-text-grey mt-2">
+                    <a href="/login">Go to login</a>
+                  </p>
+                )}
               </div>
             </div>
           </div>
