@@ -14,9 +14,10 @@ import os
 import shutil
 import uuid
 import time
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+dotenv_path = find_dotenv() or '/app/.env'
+load_dotenv(dotenv_path)
 
 import secrets
 import re
@@ -57,7 +58,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "")
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "https://littlebanbrick.cn")
 if not FRONTEND_BASE_URL:
     if os.getenv("ENV", "development") == "production":
         raise ValueError("FRONTEND_BASE_URL must be set in .env for production (e.g. https://littlebanbrick.cn)")
