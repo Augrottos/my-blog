@@ -696,7 +696,7 @@ async def register(request: Request, user: UserRegister):
 
 @app.get("/api/verify-email")
 @limiter.limit("20/minute")
-async def verify_email(token: str):
+async def verify_email(request: Request, token: str):
     try:
         user = await database.fetch_one(users.select().where(users.c.verify_token == token))
         if not user:
