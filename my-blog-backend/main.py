@@ -15,6 +15,9 @@ import shutil
 import uuid
 import time
 from dotenv import load_dotenv
+
+load_dotenv()
+
 import secrets
 import re
 import requests
@@ -53,8 +56,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-load_dotenv()
 
 FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "")
 if not FRONTEND_BASE_URL:
