@@ -59,7 +59,11 @@ function ProfilePage() {
       setUsernameError("Username can only contain letters, numbers and underscores");
       return;
     }
-
+    if (trimmed === user.username) {
+        setUsernameError("New username is the same as your current username.");
+        return;
+    }
+    
     setChangeLoading(true);
     try {
       const res = await authFetch(`${API_BASE}/user/username`, {

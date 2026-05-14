@@ -859,7 +859,7 @@ class UsernameUpdate(BaseModel):
 async def change_username(
     req: UsernameUpdate,
     current_user: TokenData = Depends(get_current_user),
-    response: Response = None,
+    response: Response,
     _=Depends(verify_csrf)
 ):
     # 1. 检查新用户名合法性
@@ -870,6 +870,8 @@ async def change_username(
         return fail("This username is not allowed", 400)
     if not re.match(r'^[a-zA-Z0-9_]+$', new_username):
         return fail("Username can only contain letters, numbers and underscores", 400)
+    if new_username == current_user.username:
+        return fail("New username is the same as the current one. No change needed.", 400)
 
     # 2. 检查是否已存在
     existing = await database.fetch_one(users.select().where(users.c.username == new_username))
@@ -908,6 +910,10 @@ async def change_username(
         # 更新 comments 表
         await database.execute(
             comments.update().where(comments.c.author == current_user.username).values(author=new_username)
+        )
+        # 同时更新 parent_author 字段（被回复的作者名）
+        await database.execute(
+            comments.update().where(comments.c.parent_author == current_user.username).values(parent_author=new_username)
         )
         # 更新 messages 表的发送者
         await database.execute(
