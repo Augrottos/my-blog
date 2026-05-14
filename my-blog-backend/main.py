@@ -857,9 +857,9 @@ class UsernameUpdate(BaseModel):
 
 @app.put("/api/user/username")
 async def change_username(
+    response: Response,
     req: UsernameUpdate,
     current_user: TokenData = Depends(get_current_user),
-    response: Response,
     _=Depends(verify_csrf)
 ):
     # 1. 检查新用户名合法性
