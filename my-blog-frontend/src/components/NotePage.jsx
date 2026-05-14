@@ -1,11 +1,11 @@
-import { useParams, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import { getCurrentUser, authFetch } from '../utils';
+import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import { getCurrentUser, authFetch } from "../utils";
 
-const API_BASE = '/api';
+const API_BASE = "/api";
 
 function NotePage() {
   const { id } = useParams();
@@ -14,42 +14,54 @@ function NotePage() {
 
   useEffect(() => {
     authFetch(`${API_BASE}/notes/${id}`)
-      .then(res => res.json())
-      .then(res => {
+      .then((res) => res.json())
+      .then((res) => {
         if (res.code === 200) setNote(res.data);
       })
       .catch(console.error);
 
-    getCurrentUser().then(res => {
-      if (res.data?.role === 'admin') setIsAdmin(true);
+    getCurrentUser().then((res) => {
+      if (res.data?.role === "admin") setIsAdmin(true);
     });
   }, [id]);
 
-  if (!note) return <section className="section"><div className="container">Loading...</div></section>;
+  if (!note)
+    return (
+      <section className="section">
+        <div className="container">Loading...</div>
+      </section>
+    );
 
   return (
     <section className="section has-navbar-fixed-top">
       <div className="container">
         <div className="level">
           <div className="level-left">
-            <Link to="/study-notes" className="button is-light is-small">&larr; Back</Link>
+            <Link to="/study-notes" className="button is-light is-small">
+              &larr; Back
+            </Link>
           </div>
           {isAdmin && (
             <div className="level-right">
-              <Link to={`/study-notes/${id}/edit`} className="button is-dark is-small">Edit</Link>
+              <Link
+                to={`/study-notes/${id}/edit`}
+                className="button is-dark is-small"
+              >
+                Edit
+              </Link>
             </div>
           )}
         </div>
         <div
           className="content markdown-body note-body"
           style={{
-            maxWidth: '85%',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            backgroundColor: '#ffffff',
-            padding: '2rem 2.5rem',
-            borderRadius: '6px',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+            maxWidth: "85%",
+            marginLeft: "auto",
+            marginRight: "auto",
+            backgroundColor: "#ffffff",
+            padding: "2rem 2.5rem",
+            borderRadius: "6px",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
           }}
         >
           <ReactMarkdown

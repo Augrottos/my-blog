@@ -698,7 +698,10 @@ async def register(request: Request, user: UserRegister):
 @limiter.limit("20/minute")
 async def verify_email(request: Request, token: str):
     try:
-        user = await database.fetch_one(users.select().where(users.c.verify_token == token))
+        user = await asyncio.wait_for(
+            database.fetch_one(users.select().where(users.c.verify_token == token)),
+            timeout=8.0
+        )
         if not user:
             return {"code": 400, "msg": "Invalid or expired token"}
 
@@ -711,14 +714,19 @@ async def verify_email(request: Request, token: str):
         if beijing_now() > expire_time:
             return {"code": 400, "msg": "Verification link expired (15min)"}
 
-        await database.execute(
-            users.update()
+        await asyncio.wait_for(
+            database.execute(
+                users.update()
                 .where(users.c.verify_token == token)
                 .values(is_verified=1, verify_token=None, verify_token_expire=None)
+            ),
+            timeout=8.0
         )
 
         return {"code": 200, "msg": "Email verified successfully!"}
 
+    except asyncio.TimeoutError:
+        return {"code": 500, "msg": "Server busy, please try again"}
     except Exception as e:
         print("Verification error:", repr(e))
         return {"code": 500, "msg": str(e)}

@@ -1,10 +1,13 @@
-import ProfileCard from './LeftWidgets';
-import MomentList from './MiddleWidgets';
-import RightWidgets from './RightWidgets';
+import ProfileCard from "./LeftWidgets";
+import MomentList from "./MiddleWidgets";
+import RightWidgets from "./RightWidgets";
 
 function HomePage() {
   return (
-    <div className="main-content" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div
+      className="main-content"
+      style={{ display: "flex", flexDirection: "column" }}
+    >
       <style>{`
         /* 关键修复：强制所有父容器不创建滚动上下文 */
         .section,
