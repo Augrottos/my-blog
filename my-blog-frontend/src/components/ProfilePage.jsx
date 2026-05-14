@@ -113,7 +113,7 @@ function ProfilePage() {
                 <hr />
                 {/* 修改用户名按钮 */}
                 <button
-                  className="button is-fullwidth is-info mb-3"
+                  className="button is-fullwidth is-dark mb-3"
                   onClick={() => setShowUsernameModal(true)}
                 >
                   Change Username
@@ -155,7 +155,7 @@ function ProfilePage() {
                   />
                 </div>
                 {usernameError && <p className="help is-danger">{usernameError}</p>}
-                <p className="help is-info mt-2">
+                <p className="help is-dark mt-2">
                   You can change username once every 30 days.
                 </p>
               </div>
