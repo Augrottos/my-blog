@@ -185,38 +185,32 @@ function PostPage() {
 
           {/* Images display area */}
           {validImages.length > 0 && (
-            <div className="mt-3" style={{ textAlign: "left" }}>
+            <div className="mt-3 post-images-wrapper">
               {validImages.length === 1 ? (
                 <figure
-                  className="image"
+                  className="image single-post-image"
                   style={{ maxWidth: "100%", cursor: "pointer" }}
                   onClick={() => openLightbox(0)}
                 >
                   <img
-                    src={getImageUrl(getThumbUrl(validImages[0]))}
+                    src={getImageUrl(validImages[0])}
                     alt="post image"
-                    style={{
-                      maxHeight: "400px",
-                      maxWidth: "100%",
-                      objectFit: "contain",
-                    }}
-                    loading="lazy"
+                    style={{ maxHeight: "400px", objectFit: "contain" }}
                   />
                 </figure>
               ) : (
                 <div className="columns is-multiline is-mobile">
                   {validImages.map((url, idx) => (
-                    <div key={idx} className="column is-4">
+                    <div key={idx} className="column is-4 post-image-column">
                       <figure
                         className="image is-3by2"
                         onClick={() => openLightbox(idx)}
                         style={{ cursor: "pointer" }}
                       >
                         <img
-                          src={getImageUrl(getThumbUrl(url))}
+                          src={getImageUrl(url)}
                           alt={`post-img-${idx}`}
                           style={{ objectFit: "cover" }}
-                          loading="lazy"
                         />
                       </figure>
                     </div>
@@ -332,6 +326,36 @@ function PostPage() {
           onNext={nextImage}
         />
       )}
+      <style>{`
+        @media (max-width: 1023px) {
+          .post-images-wrapper {
+            text-align: center !important;  /* 居中显示 */
+          }
+          .single-post-image {
+            width: 100% !important;
+            max-height: none !important;
+          }
+          .single-post-image img {
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            object-fit: contain !important;
+          }
+          .post-image-column {
+            width: 100% !important;        /* 每张图片占满一行 */
+            flex: none !important;
+            margin: 0 0 1rem 0 !important;
+          }
+          .post-image-column figure {
+            margin: 0 !important;
+          }
+          .post-image-column img {
+            width: 100% !important;
+            height: auto !important;
+            object-fit: cover !important;
+          }
+        }
+      `}</style>
     </>
   );
 }

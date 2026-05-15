@@ -5,6 +5,8 @@ import { Link } from "react-router-dom";
 import SongCard from "./SongCard";
 import { useTheme } from "../context/ThemeContext";
 
+import Friends from "./Friends";
+
 function ProfileCard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -265,6 +267,8 @@ function ProfileCard() {
             </div>
           </div>
         </Link>
+
+        <Friends />
 
         <LinksCard />
       </div>
