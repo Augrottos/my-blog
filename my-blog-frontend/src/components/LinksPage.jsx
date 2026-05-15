@@ -28,6 +28,12 @@ function LinksPage() {
               url: "https://github.com/Augrottos",
               description: "AI researcher and indie maker",
             },
+            {
+              name: "Hubery",
+              avatar: "https://s41.ax1x.com/2026/03/14/peEfnTx.jpg",
+              url: "https://hubery258.github.io/",
+              description: "千早爱音的狗",
+            },
           ],
         },
         {
@@ -35,12 +41,6 @@ function LinksPage() {
           title: "Study Partners",
           description: "People who inspire me to learn more.",
           links: [
-            {
-              name: "Aliceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-              avatar: "https://randomuser.me/api/portraits/women/1.jpg",
-              url: "https://example.com/alice",
-              description: "Machine Learning expertttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
-            },
           ],
         },
       ];

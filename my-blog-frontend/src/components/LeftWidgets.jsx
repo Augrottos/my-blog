@@ -5,8 +5,6 @@ import { Link } from "react-router-dom";
 import SongCard from "./SongCard";
 import { useTheme } from "../context/ThemeContext";
 
-// 删除 import Friends from "./Friends";
-
 function ProfileCard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -267,8 +265,6 @@ function ProfileCard() {
             </div>
           </div>
         </Link>
-
-        {/* 删除 <Friends /> 这一行 */}
 
         <LinksCard />
       </div>
