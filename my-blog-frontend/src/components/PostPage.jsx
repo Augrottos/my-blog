@@ -199,9 +199,13 @@ function PostPage() {
                   />
                 </figure>
               ) : (
-                <div className="columns is-multiline is-mobile">
+                <div className={`columns is-multiline is-mobile${
+                  validImages.length === 2 || validImages.length === 4 ? " is-centered" : ""
+                }`}>
                   {validImages.map((url, idx) => (
-                    <div key={idx} className="column is-4 post-image-column">
+                    <div key={idx} className={`column ${
+                      validImages.length === 2 || validImages.length === 4 ? "is-6" : "is-4"
+                    } post-image-column`}>
                       <figure
                         className="image is-3by2"
                         onClick={() => openLightbox(idx)}
