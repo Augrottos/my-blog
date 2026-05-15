@@ -107,6 +107,9 @@ function Header() {
             <Link className="navbar-item" to="/about">
               About
             </Link>
+            <Link className="navbar-item" to="/links">
+              Links
+            </Link>
             <Link
               className="navbar-item"
               to="https://github.com/Littlebanbrick"

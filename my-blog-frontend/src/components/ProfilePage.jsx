@@ -56,9 +56,7 @@ function ProfilePage() {
       return;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-      setUsernameError(
-        "Username can only contain letters, numbers and underscores",
-      );
+      setUsernameError("Username can only contain letters, numbers and underscores");
       return;
     }
     if (trimmed === user.username) {
@@ -75,22 +73,24 @@ function ProfilePage() {
       });
       const data = await res.json();
       if (data.code === 200) {
-        // 更新本地存储的 token
+        // 成功：更新 token，刷新页面
         if (data.data.access_token) {
           localStorage.setItem("token", data.data.access_token);
         }
-        // 更新 csrf_token cookie（后端已设置，但前端手动同步确保）
         if (data.data.csrf_token) {
           document.cookie = `csrf_token=${data.data.csrf_token}; path=/`;
         }
         alert("Username updated successfully! Page will refresh.");
         window.location.reload();
       } else {
+        // 失败：显示错误，重置 loading，不关闭模态框
         setUsernameError(data.msg || "Failed to update username");
+        setChangeLoading(false);
       }
     } catch (err) {
       setUsernameError("Network error, please try again");
-    } 
+      setChangeLoading(false);
+    }
   };
 
   if (!user) return <div className="section">Loading...</div>;

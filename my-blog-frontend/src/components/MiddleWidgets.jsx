@@ -180,7 +180,6 @@ function MomentList() {
           }
         }
       `}</style>
-
       <div className={loading ? "" : "moment-slide-up"}>
         {moments.map((item) => {
           const isLiked = likedMap[item.id] || false;
