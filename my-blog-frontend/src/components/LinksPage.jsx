@@ -12,7 +12,7 @@ function LinksPage() {
       const profileData = {
         avatar: "/myAvatar.jpg",
         name: "Johnny Wang",
-        bio: "Unique, be yourself, be a monster!",
+        bio: "A freshman majoring in CS from Zhejiang Univ. - Curious, consistent, and always building",
       };
       setProfile(profileData);
 
@@ -118,7 +118,7 @@ function LinksPage() {
           )}
 
           {/* 友链分组 */}
-          {friendGroups.map((group) => (
+          {friendGroups.filter(g => g.links.length > 0).map((group) => (
             <div key={group.id} className="card mb-5">
               <div className="card-content">
                 <h2 className="title is-4 has-text-dark" style={{ marginBottom: "0.5rem" }}>
