@@ -47,7 +47,7 @@ Image.MAX_IMAGE_PIXELS = 89478485  # ~85 MP, prevent decompression bombs
 THUMB_MAX_WIDTH = 600          # 缩略图最大宽度
 THUMB_QUALITY = 75             # JPEG 质量
 
-from github_trending import trending_scheduler, update_trending_post, process_deepseek_reply, process_deepseek_context_reply
+from github_trending import trending_scheduler, update_trending_post, process_deepseek_reply, process_deepseek_context_reply, ensure_daily_gtt
 
 app = FastAPI()
 
@@ -381,6 +381,7 @@ async def startup():
     await database.connect()
     asyncio.create_task(cleanup_unverified_users())
     asyncio.create_task(trending_scheduler())
+    asyncio.create_task(ensure_daily_gtt())
 
 @app.on_event("shutdown")
 async def shutdown():

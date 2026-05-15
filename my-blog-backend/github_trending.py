@@ -109,6 +109,17 @@ Repositories:
 async def update_trending_post():
     """每日午夜执行：删除旧 GTT 帖子 → 抓取 → 去重 → 生成新帖 → 记录仓库 → 清理旧记录"""
     from main import database, posts, get_current_time
+    
+    # 防重复：若今天已有 GTT 帖子则跳过
+    today_start = beijing_date() + " 00:00:00"
+    existing = await database.fetch_one(
+        posts.select()
+        .where(posts.c.title == "🤖 GitHub Trending Today")
+        .where(posts.c.date >= today_start)
+    )
+    if existing:
+        print(f"GTT already exists for {beijing_date()}, skipping.")
+        return
 
     # 1. 级联删除所有旧 GTT 帖子及其关联数据
     old_rows = await database.fetch_all(
@@ -326,3 +337,22 @@ User question: {question}"""
         )
     except Exception as e:
         print(f"DeepSeek context reply error: {e}")
+
+async def ensure_daily_gtt():
+    """每小时检查一次，如果当天没有 GTT 帖子则立即生成"""
+    while True:
+        await asyncio.sleep(3600)  # 每小时一次
+        try:
+            from main import database, posts
+            today_start = beijing_date() + " 00:00:00"   # 北京时间今日开始
+            # 查询今天是否已有 GTT 帖子
+            existing = await database.fetch_one(
+                posts.select()
+                .where(posts.c.title == "🤖 GitHub Trending Today")
+                .where(posts.c.date >= today_start)
+            )
+            if not existing:
+                print(f"Compensating missing GTT for {beijing_date()}")
+                await update_trending_post()
+        except Exception as e:
+            print(f"Daily GTT compensation check error: {e}")

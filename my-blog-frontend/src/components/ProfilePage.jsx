@@ -56,14 +56,16 @@ function ProfilePage() {
       return;
     }
     if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
-      setUsernameError("Username can only contain letters, numbers and underscores");
+      setUsernameError(
+        "Username can only contain letters, numbers and underscores",
+      );
       return;
     }
     if (trimmed === user.username) {
-        setUsernameError("New username is the same as your current username.");
-        return;
+      setUsernameError("New username is the same as your current username.");
+      return;
     }
-    
+
     setChangeLoading(true);
     try {
       const res = await authFetch(`${API_BASE}/user/username`, {
@@ -139,11 +141,17 @@ function ProfilePage() {
       {/* 修改用户名的模态框 */}
       {showUsernameModal && (
         <div className="modal is-active">
-          <div className="modal-background" onClick={() => setShowUsernameModal(false)}></div>
+          <div
+            className="modal-background"
+            onClick={() => setShowUsernameModal(false)}
+          ></div>
           <div className="modal-card">
             <header className="modal-card-head">
               <p className="modal-card-title">Change Username</p>
-              <button className="delete" onClick={() => setShowUsernameModal(false)}></button>
+              <button
+                className="delete"
+                onClick={() => setShowUsernameModal(false)}
+              ></button>
             </header>
             <section className="modal-card-body">
               <div className="field">
@@ -158,7 +166,9 @@ function ProfilePage() {
                     disabled={changeLoading}
                   />
                 </div>
-                {usernameError && <p className="help is-danger">{usernameError}</p>}
+                {usernameError && (
+                  <p className="help is-danger">{usernameError}</p>
+                )}
                 <p className="help is-dark mt-2">
                   You can change username once every 30 days.
                 </p>
