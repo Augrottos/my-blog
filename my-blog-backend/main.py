@@ -883,10 +883,12 @@ async def change_username(
 
     # 3. 获取当前用户信息，检查上次修改时间
     user_row = await database.fetch_one(users.select().where(users.c.username == current_user.username))
+    user_row_dict = dict(user_row)
+    
     if not user_row:
         return fail("User not found", 404)
 
-    last_change_str = user_row.get("last_username_change")
+    last_change_str = user_row_dict.get("last_username_change")
     if last_change_str:
         try:
             last_change = datetime.strptime(last_change_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone(timedelta(hours=8)))
