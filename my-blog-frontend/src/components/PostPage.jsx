@@ -53,6 +53,7 @@ function PostPage() {
       return;
     }
 
+    setIsLiking(true);
     try {
       const res = await authFetch(`/api/posts/${id}/like`, {
         method: "POST",
@@ -69,6 +70,8 @@ function PostPage() {
       }
     } catch (error) {
       console.log("Please login to like the post.");
+    } finally {
+      setIsLiking(false);
     }
   };
 
