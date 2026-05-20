@@ -9,7 +9,7 @@ function StudyNotesPage() {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const loadNotes = () => {
-    authFetch(`${API_BASE}/notes`)
+    authFetch(`${API_BASE}/notes`, { cache: "no-store" })
       .then((res) => res.json())
       .then((res) => setNotes(res.data || []))
       .catch(console.error);
@@ -24,6 +24,8 @@ function StudyNotesPage() {
 
   const handleDelete = async (noteId) => {
     if (!window.confirm("Delete this note?")) return;
+    // 乐观删除：先从本地状态移除，避免浏览器缓存导致卡片残留
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
     try {
       await authFetch(`${API_BASE}/admin/notes/${noteId}`, {
         method: "DELETE",
@@ -31,6 +33,7 @@ function StudyNotesPage() {
     } catch (err) {
       console.error("Delete failed:", err);
     }
+    // 从服务器同步最新列表（纠正乐观删除的偏差 + 刷新 pin 状态）
     loadNotes();
   };
 
