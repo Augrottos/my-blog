@@ -24,10 +24,13 @@ function StudyNotesPage() {
 
   const handleDelete = async (noteId) => {
     if (!window.confirm("Delete this note?")) return;
-    await authFetch(`${API_BASE}/admin/notes/${noteId}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    try {
+      await authFetch(`${API_BASE}/admin/notes/${noteId}`, {
+        method: "DELETE",
+      });
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
     loadNotes();
   };
 
@@ -75,14 +78,9 @@ function StudyNotesPage() {
         <div className="archives-columns">
           {notes.map((note) => (
             <div key={note.id} className="card-item">
-              <div className="card">
+              <div className="card" style={{ position: "relative" }}>
                 <div className="card-content">
                   <p className="title is-5">
-                    {note.is_pinned && (
-                      <span title="Pinned" className="mr-1" style={{ color: "#e0245e" }}>
-                        <i className="fas fa-thumbtack"></i>
-                      </span>
-                    )}
                     <Link to={`/study-notes/${note.id}`}>{note.title}</Link>
                   </p>
                   <p className="has-text-grey is-size-7 mb-3">{note.summary}</p>
@@ -90,6 +88,21 @@ function StudyNotesPage() {
                     {note.updated_at}
                   </p>
                 </div>
+                {note.is_pinned && (
+                  <span
+                    title="Pinned"
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      right: "1rem",
+                      color: "#b0b0b0",
+                      opacity: 0.5,
+                    }}
+                  >
+                    <i className="fas fa-thumbtack"></i>
+                  </span>
+                )}
                 {isAdmin && (
                   <footer className="card-footer">
                     <Link

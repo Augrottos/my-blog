@@ -849,7 +849,21 @@ async def logout(response: Response):
     return {"code": 200, "msg": "Logged out"}
 
 @app.get("/api/me")
-async def me(current_user: TokenData = Depends(get_current_user)):
+async def me(request: Request, response: Response, current_user: TokenData = Depends(get_current_user)):
+    # 每次获取当前用户信息时，顺带刷新 csrf_token 的有效期，
+    # 避免因服务端重启导致 cookie 残余过期而需要重新登录
+    existing_csrf = request.cookies.get("csrf_token")
+    if existing_csrf:
+        secure_flag = os.getenv("ENV", "development") == "production"
+        response.set_cookie(
+            key="csrf_token",
+            value=existing_csrf,
+            httponly=False,
+            secure=secure_flag,
+            samesite="Lax",
+            max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            path="/"
+        )
     return success(data={"username": current_user.username, "role": current_user.role})
 
 #用户更名系统

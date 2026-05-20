@@ -102,7 +102,7 @@ function RightWidgets() {
                       }}
                     >
                       {note.is_pinned && (
-                        <i className="fas fa-thumbtack mr-1" style={{ color: "#e0245e" }}></i>
+                        <i className="fas fa-thumbtack mr-1" style={{ color: "#b0b0b0" }}></i>
                       )}
                       {note.title}
                     </span>
