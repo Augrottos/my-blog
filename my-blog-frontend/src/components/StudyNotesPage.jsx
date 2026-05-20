@@ -32,11 +32,19 @@ function StudyNotesPage() {
   };
 
   const handlePin = async (noteId) => {
-    const res = await authFetch(`${API_BASE}/admin/notes/${noteId}/pin`, {
-      method: "PUT",
-      credentials: "include",
-    });
-    if (res.ok) loadNotes();
+    try {
+      const res = await authFetch(`${API_BASE}/admin/notes/${noteId}/pin`, {
+        method: "PUT",
+      });
+      if (res.ok) {
+        loadNotes();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        console.error("Pin failed:", err);
+      }
+    } catch (err) {
+      console.error("Pin error:", err);
+    }
   };
 
   return (
