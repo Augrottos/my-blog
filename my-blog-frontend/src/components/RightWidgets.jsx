@@ -7,6 +7,7 @@ function RightWidgets() {
   const [photos, setPhotos] = useState([]);
   const [notes, setNotes] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [showAllNotes, setShowAllNotes] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,7 +87,7 @@ function RightWidgets() {
               </Link>
             </h3>
             <ul className="menu-list">
-              {notes.map((note) => (
+              {(showAllNotes ? notes : notes.slice(0, 3)).map((note) => (
                 <li key={note.id}>
                   <Link
                     to={`/study-notes/${note.id}`}
@@ -109,6 +110,14 @@ function RightWidgets() {
                 </li>
               ))}
             </ul>
+            {notes.length > 3 && (
+              <button
+                className="button is-text is-small mt-2"
+                onClick={() => setShowAllNotes((prev) => !prev)}
+              >
+                {showAllNotes ? "Show Less" : "Show All"}
+              </button>
+            )}
           </div>
         </div>
 
