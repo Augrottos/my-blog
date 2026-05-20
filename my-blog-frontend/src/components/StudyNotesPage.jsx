@@ -31,6 +31,14 @@ function StudyNotesPage() {
     loadNotes();
   };
 
+  const handlePin = async (noteId) => {
+    const res = await authFetch(`${API_BASE}/admin/notes/${noteId}/pin`, {
+      method: "PUT",
+      credentials: "include",
+    });
+    if (res.ok) loadNotes();
+  };
+
   return (
     <section className="section has-navbar-fixed-top">
       <style>
@@ -62,6 +70,11 @@ function StudyNotesPage() {
               <div className="card">
                 <div className="card-content">
                   <p className="title is-5">
+                    {note.is_pinned && (
+                      <span title="Pinned" className="mr-1" style={{ color: "#e0245e" }}>
+                        <i className="fas fa-thumbtack"></i>
+                      </span>
+                    )}
                     <Link to={`/study-notes/${note.id}`}>{note.title}</Link>
                   </p>
                   <p className="has-text-grey is-size-7 mb-3">{note.summary}</p>
@@ -77,6 +90,12 @@ function StudyNotesPage() {
                     >
                       Edit
                     </Link>
+                    <a
+                      className="card-footer-item"
+                      onClick={() => handlePin(note.id)}
+                    >
+                      {note.is_pinned ? "Unpin" : "Pin"}
+                    </a>
                     <a
                       className="card-footer-item has-text-danger"
                       onClick={() => handleDelete(note.id)}

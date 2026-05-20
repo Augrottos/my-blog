@@ -6,7 +6,7 @@ from fastapi import FastAPI, Body, HTTPException, Depends, status, Request, Resp
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
-from database import database, posts, comments, likes, users, projects_table, post_images, messages, song_config, deepseek_usage
+from database import database, posts, comments, likes, users, projects_table, post_images, messages, song_config, deepseek_usage, notes_meta
 from fastapi.responses import JSONResponse, FileResponse, RedirectResponse
 from sqlalchemy import func, select, and_, desc, or_
 from pydantic import BaseModel, EmailStr
@@ -1143,6 +1143,7 @@ async def list_notes():
     notes_list = []
     for f in files:
         if f.endswith('.md'):
+            note_id = f.replace('.md', '')
             path = os.path.join(NOTES_DIR, f)
             with open(path, 'r', encoding='utf-8') as fp:
                 raw = fp.read()
@@ -1150,16 +1151,29 @@ async def list_notes():
             # 取第一行（# 标题）作为标题，去掉 # 和首尾空格，保留原始大小写
             first_line = lines[0].lstrip('#').strip() if lines else ''
             # 如果有标题行就用它，否则回退到文件名
-            title = first_line if first_line else f.replace('.md', '')
+            title = first_line if first_line else note_id
             summary = first_line
             notes_list.append({
-                'id': f.replace('.md', ''),
+                'id': note_id,
                 'title': title,
                 'summary': summary,
                 'filename': f,
                 'updated_at': datetime.fromtimestamp(os.path.getmtime(path), tz=beijing_tz).strftime("%Y-%m-%d %H:%M:%S")
             })
-    notes_list.sort(key=lambda x: x['updated_at'], reverse=True)
+    # 查询 pin 状态
+    meta_rows = await database.fetch_all(notes_meta.select().where(notes_meta.c.is_pinned == 1))
+    pinned_map = {row['note_id']: row['pinned_at'] for row in meta_rows}
+    for note in notes_list:
+        note['is_pinned'] = note['id'] in pinned_map
+        note['pinned_at'] = pinned_map.get(note['id'], None)
+    # 排序：置顶笔记按 pinned_at 降序在前，其余按 updated_at 降序在后
+    notes_list.sort(key=lambda x: (not x['is_pinned'], x['pinned_at'] or '', x['updated_at']), reverse=False)
+    # 修正：is_pinned=True 排前面(pinned_at降序), is_pinned=False 排后面(updated_at降序)
+    pinned = [n for n in notes_list if n['is_pinned']]
+    unpinned = [n for n in notes_list if not n['is_pinned']]
+    pinned.sort(key=lambda x: x['pinned_at'] or '', reverse=True)
+    unpinned.sort(key=lambda x: x['updated_at'], reverse=True)
+    notes_list = pinned + unpinned
     return success(data=notes_list)
 
 @app.get("/api/notes/{note_id}")
@@ -1218,6 +1232,11 @@ async def update_note(note_id: str,
         os.rename(old_path, new_path)
         final_path = new_path
         final_id = new_file.replace('.md', '')
+        # 笔记重命名后，同步更新 notes_meta 中的 note_id
+        if final_id != note_id:
+            await database.execute(
+                notes_meta.update().where(notes_meta.c.note_id == note_id).values(note_id=final_id)
+            )
     else:
         final_path = old_path
         final_id = note_id
@@ -1237,8 +1256,38 @@ async def delete_note(note_id: str,
     path = safe_path(NOTES_DIR, note_id + '.md')
     if os.path.exists(path):
         os.remove(path)
+        # 清理 notes_meta 中对应的记录
+        await database.execute(notes_meta.delete().where(notes_meta.c.note_id == note_id))
         return success(msg="Deleted")
     return fail(msg="Note not found", code=404)
+
+@app.put("/api/admin/notes/{note_id}/pin")
+async def toggle_pin_note(note_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    _=Depends(verify_csrf)
+):
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    # 检查笔记文件是否存在
+    path = safe_path(NOTES_DIR, note_id + '.md')
+    if not os.path.exists(path):
+        return fail(msg="Note not found", code=404)
+    existing = await database.fetch_one(notes_meta.select().where(notes_meta.c.note_id == note_id))
+    now = get_current_time()
+    if existing:
+        new_pinned = 0 if existing['is_pinned'] else 1
+        await database.execute(
+            notes_meta.update().where(notes_meta.c.note_id == note_id).values(
+                is_pinned=new_pinned,
+                pinned_at=now if new_pinned else None
+            )
+        )
+    else:
+        await database.execute(
+            notes_meta.insert().values(note_id=note_id, is_pinned=1, pinned_at=now)
+        )
+        new_pinned = 1
+    return success(data={'is_pinned': bool(new_pinned)})
 
 @app.get("/api/projects")
 async def get_projects():

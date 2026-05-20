@@ -123,6 +123,16 @@ deepseek_usage = sqlalchemy.Table(
     Column("count", Integer, default=0),
 )
 
+# ========== Table of notes metadata (pin etc.) ==========
+notes_meta = sqlalchemy.Table(
+    "notes_meta",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("note_id", String(100), unique=True, nullable=False),
+    Column("is_pinned", Integer, default=0),
+    Column("pinned_at", String(20), nullable=True),
+)
+
 # ========== Table of recent trend repos ==========
 recent_repos = sqlalchemy.Table(
     "recent_repos",
@@ -225,6 +235,16 @@ def fix_missing_columns():
                 conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN date VARCHAR(10)"))
             if not column_exists("deepseek_usage", "count"):
                 conn.execute(text("ALTER TABLE deepseek_usage ADD COLUMN count INTEGER DEFAULT 0"))
+
+            if not column_exists("notes_meta", "id"):
+                conn.execute(text("ALTER TABLE notes_meta ADD COLUMN id INTEGER"))
+            if not column_exists("notes_meta", "note_id"):
+                conn.execute(text("ALTER TABLE notes_meta ADD COLUMN note_id VARCHAR(100)"))
+                conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_notes_meta_note_id ON notes_meta(note_id)"))
+            if not column_exists("notes_meta", "is_pinned"):
+                conn.execute(text("ALTER TABLE notes_meta ADD COLUMN is_pinned INTEGER DEFAULT 0"))
+            if not column_exists("notes_meta", "pinned_at"):
+                conn.execute(text("ALTER TABLE notes_meta ADD COLUMN pinned_at VARCHAR(20)"))
             
             conn.commit()
             print("All missing columns added successfully!")

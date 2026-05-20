@@ -101,6 +101,9 @@ function RightWidgets() {
                         marginRight: "0.6rem",
                       }}
                     >
+                      {note.is_pinned && (
+                        <i className="fas fa-thumbtack mr-1" style={{ color: "#e0245e" }}></i>
+                      )}
                       {note.title}
                     </span>
                     <span className="level-right is-size-7 has-text-grey-light mb-2">
