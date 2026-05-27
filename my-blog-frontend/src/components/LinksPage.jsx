@@ -9,42 +9,32 @@ function LinksPage() {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      // 修改为 Johnny Wang 的 profile
       const profileData = {
         avatar: "/myAvatar.jpg",
-        name: "KCChiaki",
-        bio: "Elahz izob tuia suiee.",
+        name: "Johnny Wang",
+        bio: "A freshman majoring in CS from Zhejiang Univ. - Curious, consistent, and always building",
       };
       setProfile(profileData);
 
+      // 修改为 Johnny Wang 的 groups
       const groups = [
         {
           id: 1,
           title: "Friends",
-          description: "My best friends in my life.",
+          description: "My best buddies in tech and life.",
           links: [
             {
-              name: "LittleBANBrick",
-              avatar: "https://littlebanbrick.cn/myAvatar.jpg",
-              url: "https://littlebanbrick.cn/",
-              description: "深圳吴彦祖",
+              name: "Augrottos",
+              avatar: "https://avatars.githubusercontent.com/u/268848168?v=4",
+              url: "https://github.com/Augrottos",
+              description: "Elahz izob tuia suiee.",
             },
             {
-              name: "M155.b1nb1n",
-              avatar: "https://m155-b1nb1n.github.io/binbin-blog/img/tx.jpg",
-              url: "https://m155-b1nb1n.github.io/binbin-blog/",
-              description: "我乃 彬彬大王！",
-            },
-            {
-              name: "roxy",
-              avatar: "https://roxy5201314.github.io/img/666.jpg",
-              url: "https://roxy5201314.github.io/",
-              description: "一只爱打pwn的小福瑞",
-            },
-            {
-              name: "Hachiwa0",
-              avatar: "https://chii.cloud/wp-content/uploads/2026/03/cropped-cropped-13583802-scaled-3.jpg",
-              url: "https://chii.cloud/",
-              description: "The sun rises and summer approaches",
+              name: "Hubery",
+              avatar: "https://s41.ax1x.com/2026/03/14/peEfnTx.jpg",
+              url: "https://blog.ramenboy.cc/",
+              description: "千早爱音的狗",
             },
           ],
         },
