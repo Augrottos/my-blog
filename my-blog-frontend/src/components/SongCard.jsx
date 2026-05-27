@@ -65,7 +65,10 @@ function SongCard() {
         outer.style.overflow = 'hidden';
         outer.style.whiteSpace = 'nowrap';
         outer.style.width = '100%';
-        outer.style.marginTop = '-4px';
+        outer.style.lineHeight = '1.8';       // 增加行高，防止文字被裁剪
+        outer.style.paddingTop = '2px';       // 可选，增加顶部内边距
+        outer.style.paddingBottom = '2px';    // 可选，增加底部内边距
+        outer.style.marginTop = '-8px';
 
         // 内容包装器（总宽度为单份内容的两倍）
         const wrapper = document.createElement('div');
