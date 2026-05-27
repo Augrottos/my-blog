@@ -64,6 +64,35 @@ function ProfileCard() {
           <ul className="menu-list">
             <li>
               <a
+                href="https://littlebanbrick.github.io/"
+                target="_blank"
+                rel="noopener"
+                className="level is-mobile"
+              >
+                <span
+                  className="level-left mb-1"
+                  style={{ flex: 1, wordBreak: "break-word" }}
+                >
+                  My gh page
+                </span>
+                <span className="level-right">
+                  <span
+                    className="level-item tag"
+                    style={{
+                      width: "100px",
+                      textAlign: "center",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    littlebanbrick
+                  </span>
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
                 href="https://en.wikipedia.org/wiki/Main_Page/"
                 target="_blank"
                 rel="noopener"
